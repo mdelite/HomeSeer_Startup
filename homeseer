@@ -1,4 +1,3 @@
-# --------------------------------------------------------
 #!/bin/bash
 ### BEGIN INIT INFO
 # Provides:          Homeseer
@@ -11,75 +10,64 @@
 ### END INIT INFO
 #
 
-NAME='HomeSeer'        # Server handle for the screen session
+NAME='HomeSeer'            # Server handle for the screen session
 DIR='/usr/local/HomeSeer'
+USER='root'                # Start HomeSeer as root. You may use a non privileged user
+                           # Note: if homeseer is running as non-root user
+                           # remove 'sudo' command in file 'go' in HomeSeer folder
+                           # and change setting gWebSvrPort to value > 1024 in settings.ini
 PWD=`pwd`
 RETVAL=0
 
 service_start() {
-if [ -f /var/run/$NAME.pid ]; then
-if [ "$(ps -p `cat /var/run/$NAME.pid` | wc -l)" -gt 1 ]; then
-echo -e "Cannot start $NAME.  Server is already running."
-else
-rm -rf /var/run/$NAME.pid
-service_start
-fi
-else
-cd $DIR
-/usr/bin/screen -S $NAME -d -m ./go
-cd $PWD
-sleep 1
-ps -ef | grep SCREEN | grep "$NAME" | grep -v grep | awk '{ print $2}' > /var/run/$NAME.pid
-echo "$NAME started."
-fi
+    if [ -f /var/run/$NAME.pid ]; then
+        if [ "$(ps -p `cat /var/run/$NAME.pid` | wc -l)" -gt 1 ]; then
+            echo -e "$NAME is already running (pidfile exists)."
+            return 1
+        else
+            rm -f /var/run/$NAME.pid
+        fi
+    fi
+    [ -f $DIR/go ] && cd $DIR && su -c "/usr/bin/screen -S $NAME -d -m ./go" $USER
+    cd $PWD
+    sleep 5
+    ps -ef | egrep "[S]CREEN.+${NAME}" | awk '{ print $2 }' > /var/run/$NAME.pid
+    [ -s /var/run/$NAME.pid ] && echo "$NAME started."
 }
 
 service_stop() {
-if [ -f /var/run/$NAME.pid ]; then
-if [ "$(ps -ef | grep SCREEN | grep "$NAME" | grep -v grep | wc -l)" -ge 1 ]; then
-/usr/bin/screen -p 0 -S $NAME -X stuff 's'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 'h'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 'u'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 't'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 'd'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 'o'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 'w'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff 'n'
-sleep 0.1
-/usr/bin/screen -p 0 -S $NAME -X stuff '^M'
-sync
-sleep 1
-fi
-if [ "$(ps -p `cat /var/run/$NAME.pid` | wc -l)" -gt 1 ]; then
-echo -e "$NAME did not stop gacefully.  Killing it"
-kill `cat /var/run/$NAME.pid`
-fi
-rm -rf /var/run/$NAME.pid
-else
-echo -e "Cannot stop $NAME.  Server is not running."
-fi
+    if [ -f /var/run/$NAME.pid ]; then
+        if [ $(ps -ef | egrep -c "[S]CREEN.+$NAME") -ge 1 ]; then
+            #invoke shutdown command to homeseer...
+            for char in $(printf "\\r s h u t d o w n \\r") ; do 
+                su -c "/usr/bin/screen -p 0 -S $NAME -X stuff $char" $USER
+                sleep 0.1
+            done
+            sleep 15
+        fi
+        if [ "$(ps -p `cat /var/run/$NAME.pid` | wc -l)" -gt 1 ]; then
+            echo -e "$NAME did not stop gacefully. Killing it"
+            [ -s /var/run/$NAME.pid ] && kill `cat /var/run/$NAME.pid`
+        fi
+        rm -f /var/run/$NAME.pid
+    else
+        echo -e "$NAME is not running."
+    fi
 }
 
 case "$1" in
 'start')
-service_start
+    service_start
 ;;
 'stop')
-service_stop
+    service_stop
 ;;
 'restart')
-service_stop
-sleep 5
-service_start
+    service_stop
+    sleep 5
+    service_start
 ;;
 *)
-echo "Usage $0 start|stop|restart"
+    echo "Usage $0 start|stop|restart"
 esac
 # --------------------------------------------------------
