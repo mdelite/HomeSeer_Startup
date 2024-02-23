@@ -1,0 +1,85 @@
+# --------------------------------------------------------
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          Homeseer
+# Required-Start:    $local_fs $syslog $time
+# Required-Stop:     $local_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/Stop HomeSeer Server
+# Description:       Start/Stop HomeSeer Server
+### END INIT INFO
+#
+
+NAME='HomeSeer'        # Server handle for the screen session
+DIR='/usr/local/HomeSeer'
+PWD=`pwd`
+RETVAL=0
+
+service_start() {
+if [ -f /var/run/$NAME.pid ]; then
+if [ "$(ps -p `cat /var/run/$NAME.pid` | wc -l)" -gt 1 ]; then
+echo -e "Cannot start $NAME.  Server is already running."
+else
+rm -rf /var/run/$NAME.pid
+service_start
+fi
+else
+cd $DIR
+/usr/bin/screen -S $NAME -d -m ./go
+cd $PWD
+sleep 1
+ps -ef | grep SCREEN | grep "$NAME" | grep -v grep | awk '{ print $2}' > /var/run/$NAME.pid
+echo "$NAME started."
+fi
+}
+
+service_stop() {
+if [ -f /var/run/$NAME.pid ]; then
+if [ "$(ps -ef | grep SCREEN | grep "$NAME" | grep -v grep | wc -l)" -ge 1 ]; then
+/usr/bin/screen -p 0 -S $NAME -X stuff 's'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 'h'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 'u'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 't'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 'd'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 'o'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 'w'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff 'n'
+sleep 0.1
+/usr/bin/screen -p 0 -S $NAME -X stuff '^M'
+sync
+sleep 1
+fi
+if [ "$(ps -p `cat /var/run/$NAME.pid` | wc -l)" -gt 1 ]; then
+echo -e "$NAME did not stop gacefully.  Killing it"
+kill `cat /var/run/$NAME.pid`
+fi
+rm -rf /var/run/$NAME.pid
+else
+echo -e "Cannot stop $NAME.  Server is not running."
+fi
+}
+
+case "$1" in
+'start')
+service_start
+;;
+'stop')
+service_stop
+;;
+'restart')
+service_stop
+sleep 5
+service_start
+;;
+*)
+echo "Usage $0 start|stop|restart"
+esac
+# --------------------------------------------------------
