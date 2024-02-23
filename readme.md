@@ -1,29 +1,15 @@
 # HS4 Linux Startup and Shutdown
 
 My attempt to get my HS4 system to automatically startup when my machine starts.
+This is currently working on my Linux box running Ubuntu 22.04.4 LTS. 
 
-Started with this post from the HomeSeer forums [HS3 Linux startup and shutdown](https://forums.homeseer.com/forum/homeseer-products-services/system-software-controllers/hs3-hs3pro-software/hs3-hs3pro-discussion/79355-hs3-linux-startup-and-shutdown).
-
-## Notes:
-From post #3 ^[https://forums.homeseer.com/forum/homeseer-products-services/system-software-controllers/hs3-hs3pro-software/hs3-hs3pro-discussion/79355-hs3-linux-startup-and-shutdown?p=766560#post766560]
-> The spelling out shutdown part is because for whatever reason, homeseer wont take
-> the characters that fast. The sleeps make it work. You can use screen -r -S HomeSeer
-> from another ssh shell to see it happen. Note the ^D is created by hitting Ctrl-V
-> then Enter in vi in insert mode. It is not just a ^ and D
-> 
-> The script should be created in /etc/init.d as root. It gets added to auto startup
-> by issuing the command `sudo update-rc.d homeseer defaults`. After that Homeseer
-> will start and stop automatically when the server starts and stops
-> 
-> command line Use:
-> ```
-> sudo service homeseer start
-> sudo service homeseer stop
-> sudo service homeseer restart
-> ```
-> 
-> Connect to the console at any time by issuing
-> ```
-> sudo screen -r -S HomeSeer
-> ```
-
+## Instructions
+The `homeseer.service` is wanting HomeSeer to be installed in the `/opt/HomeSeer/`
+directory. If installed in another location, update the paths in the file.
+1. Copy the systemd service file `homeseer.service` to the `/etc/systemd/system/` directory.
+2. Run the following to start the service and checkt that it is running.
+```
+sudo systemctl enable homeseer
+sudo systemctl start homeseer
+sudo systemctl status homeseer
+```
